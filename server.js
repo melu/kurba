@@ -25,8 +25,9 @@ io.on('connection', function(socket){
             y: randomInt(100,400)
         };
 
-        socket.emit('allplayers', getAllPlayers());
-        socket.broadcast.emit('newplayer', socket.player);
+        socket.emit('newplayer', socket.player);
+        socket.emit('allplayers', getAllPlayers(socket));
+        io.emit('newenemyplayer', socket.player);
 
         var VELOCITY = 5;
         socket.on('moveUp', function(){
@@ -54,11 +55,13 @@ io.on('connection', function(socket){
 
 });
 
-function getAllPlayers(){
+function getAllPlayers(socket){
     var players = [];
     Object.keys(io.sockets.connected).forEach(function(socketId){
-        var player = io.sockets.connected[socketId].player;
-        if(player) players.push(player);
+        if(socket.id != socketId){
+            var player = io.sockets.connected[socketId].player;
+            if(player) players.push(player);
+        }
     });
     return players;
 }

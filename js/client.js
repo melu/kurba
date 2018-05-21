@@ -2,6 +2,12 @@ var Client = {};
 Client.socket = io.connect();
 
 Client.socket.on('newplayer', function(data){
+    console.log("newplayer:"+data.id);
+    Game.addPlayer(data.id, data.x, data.y);
+});
+
+Client.socket.on('newenemyplayer', function(data){
+    console.log("newenemyplayer:"+data.id);
     Game.addNewPlayer(data.id, data.x, data.y);
 });
 
@@ -36,3 +42,11 @@ Client.moveLeft = function(){
 Client.moveRight = function(){
     Client.socket.emit('moveRight');
 }
+
+Client.chat = function(){
+    Client.socket.emit('chat');
+}
+
+Client.socket.on('recieveChat', function(chat){
+    Game.showChat(chat);
+})
