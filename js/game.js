@@ -37,32 +37,36 @@ Game.create = function(){
 };
 
 Game.movePlayer = function(id, x, y){
-    var player = Game.playerMap[id];
-    
-    player.scale.x = 1;
-    //left
-    if(player.x>x){
-        player.animations.play('right');
-        player.scale.x = -1;
+    if(Game.playerMap && Game.playerMap[id]){
+        var player = Game.playerMap[id];
+        
+        //left
+        if(player.x>x){
+            player.animations.play('right');
+            player.scale.x = -1;
+        }
+        
+        //right
+        if(player.x<x){
+            player.animations.play('right');
+            player.scale.x = 1;
+        }
+        
+        //down
+        if(player.y<y){
+            player.animations.play('down');
+            player.scale.x = 1;
+        }
+        
+        //up
+        if(player.y>y){
+            player.animations.play('up');
+            player.scale.x = 1;
+        }
+        
+        player.x = x;
+        player.y = y;
     }
-
-    //right
-    if(player.x<x){
-        player.animations.play('right');
-    }
-
-    //down
-    if(player.y<y){
-        player.animations.play('down');
-    }
-
-    //up
-    if(player.y>y){
-        player.animations.play('up');
-    }
-
-    player.x = x;
-    player.y = y;
 }
 
 Game.update = function(){
@@ -102,7 +106,10 @@ Game.addPlayer = function(id, x , y){
     game.camera.bounds = (0,0,600,600);
     game.camera.follow(Game.player);
     // game.camera.follow(Game.player, Phaser.Camera.FOLLOW_TOPDOWN, 0.5, 0.5);
-    // console.log(game.camera.follow)
+
+    game.input.onDown.add(function(pointer){
+        Client.shoot(pointer);
+    }, this);
 }
 
 Game.addNewPlayer = function(id, x, y){

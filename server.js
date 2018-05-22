@@ -22,30 +22,46 @@ io.on('connection', function(socket){
         socket.player = {
             id: server.lastPlayderID++,
             x: randomInt(100,400),
-            y: randomInt(100,400)
+            y: randomInt(100,400),
+            velocity:10,
+            _moveUp:false,
+            _moveDown:false,
+            _moveLeft:false,
+            _moveRight:false,
         };
 
         socket.emit('newplayer', socket.player);
         socket.emit('allplayers', getAllPlayers(socket));
         io.emit('newenemyplayer', socket.player);
-
-        var VELOCITY = 5;
+        
         socket.on('moveUp', function(){
-            socket.player.y-=VELOCITY;
-            io.emit('move', socket.player);
+            socket.player._moveUp=true;
         });
         socket.on('moveDown', function(){
-            socket.player.y+=5;
-            io.emit('move', socket.player);
+            socket.player._moveDown=true;
         });
         socket.on('moveLeft', function(){
-            socket.player.x-=VELOCITY;
-            io.emit('move', socket.player);
+            socket.player._moveLeft=true;
         });
         socket.on('moveRight', function(){
-            socket.player.x+=VELOCITY;
-            io.emit('move', socket.player);
+            socket.player._moveRight=true;
         });
+
+        socket.on('shoot', function(pointer){
+            console.log(pointer);
+        })
+
+        socket.player.updatePosition = function(){
+            if(socket.player._moveUp) socket.player.y -= socket.player.velocity;
+            if(socket.player._moveDown) socket.player.y += socket.player.velocity;
+            if(socket.player._moveLeft) socket.player.x -= socket.player.velocity;
+            if(socket.player._moveRight) socket.player.x += socket.player.velocity;
+
+            socket.player._moveUp = false;
+            socket.player._moveDown = false;
+            socket.player._moveLeft = false;
+            socket.player._moveRight = false;
+        }
 
         // gestionamos la desconexion
         socket.on('disconnect', function(){
@@ -69,3 +85,13 @@ function getAllPlayers(socket){
 function randomInt(low, high){
     return Math.floor(Math.random() * (high - low) + low);
 }
+
+setInterval(function(){
+    Object.keys(io.sockets.connected).forEach(function(socketId){
+        var socket = io.sockets.connected[socketId];
+        if(socket.player){
+            socket.player.updatePosition();
+            io.emit('move', socket.player);
+        }
+    });    
+}, 1000/25);

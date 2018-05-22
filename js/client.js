@@ -43,6 +43,10 @@ Client.moveRight = function(){
     Client.socket.emit('moveRight');
 }
 
+Client.shoot = function(pointer){
+    Client.socket.emit("shoot", pointer);
+}
+
 Client.chat = function(){
     Client.socket.emit('chat');
 }
