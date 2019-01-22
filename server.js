@@ -68,19 +68,20 @@ io.on('connection', function(socket){
                 timer:0,
                 destroy:false,
                 updatePosition: function(){
-                    this.x+=this.vx;
-                    this.y+=this.vy;
-                    this.timer++;
-                    if(this.timer>100){
-                        this.destroy = true;
-                    }
+                    if(!this.destroy) {                    
+                        this.x+=this.vx;
+                        this.y+=this.vy;
+                        this.timer++;
+                        if(this.timer>100){
+                            this.destroy = true;
+                        }
 
-                    var playerCollision = collideWithPlayer(this);
-                    if(playerCollision) {
-                        playerCollision.health -= this.damage;
-                        this.destroy = true;
+                        var playerCollision = collideWithPlayer(this);
+                        if(playerCollision) {
+                            playerCollision.health -= this.damage;
+                            this.destroy = true;
+                        }
                     }
-                    
                 }
             };
             OBJECT_LIST.push(bullet)
@@ -129,10 +130,6 @@ function collideWithPlayer(object) {
                         rect1.x + rect1.width > rect2.x &&
                         rect1.y < rect2.y + rect2.height &&
                         rect1.height + rect1.y > rect2.y){
-                            console.log("COLLISION:")
-                            console.log(object.ownerID);
-                            console.log(socket.player.id);
-                            console.log(object.ownerID !== socket.player.id);
                             playerCollision = socket.player;
                             return socket.player;
                         }

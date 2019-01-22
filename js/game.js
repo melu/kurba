@@ -47,12 +47,12 @@ Game.create = function(){
 Game.updateState = function(pack){
     for(var playerIndex in pack.players){
         var player = pack.players[playerIndex];
-        Game.movePlayer(player.id, player.x, player.y);
+        Game.updatePlayer(player);
     }
 
     for(var objectIndex in pack.objects){
         var object = pack.objects[objectIndex];
-        if(!Game.objectList[object.id]){
+        if(!Game.objectList[object.id] && !object.destroy){
             Game.addObject(object.id, object.x, object.y);
         }else{
             if(object.destroy){
@@ -65,36 +65,52 @@ Game.updateState = function(pack){
     }
 }
 
-Game.movePlayer = function(id, x, y){
-    if(Game.playerMap && Game.playerMap[id]){
-        var player = Game.playerMap[id];
+Game.updatePlayer = function(newPlayerState){
+    if(Game.playerMap && Game.playerMap[newPlayerState.id]){
+        var player = Game.playerMap[newPlayerState.id];
         
         //left
-        if(player.x>x){
+        if(player.x>newPlayerState.x){
             player.animations.play('right');
             player.scale.x = -1;
         }
         
         //right
-        if(player.x<x){
+        if(player.x<newPlayerState.x){
             player.animations.play('right');
             player.scale.x = 1;
         }
         
         //down
-        if(player.y<y){
+        if(player.y<newPlayerState.y){
             player.animations.play('down');
             player.scale.x = 1;
         }
         
         //up
-        if(player.y>y){
+        if(player.y>newPlayerState.y){
             player.animations.play('up');
             player.scale.x = 1;
         }
         
-        player.x = x;
-        player.y = y;
+        player.x = newPlayerState.x;
+        player.y = newPlayerState.y;
+        player.health = newPlayerState.health;
+
+        var porcentaje = player.health > 0 ? player.health : 0;
+        if(player.barraVida){
+            player.barraVida.x = player.x - (100-porcentaje)/2;
+            player.barraVida.y = player.y - 20;
+            player.barraVida.width = porcentaje;
+            
+        }
+        
+        if(player.barraVidaRestante){
+            console.log(porcentaje);
+            player.barraVidaRestante.x = player.x + (porcentaje/2);
+            player.barraVidaRestante.y = player.y - 20;
+            player.barraVidaRestante.width = 100 - porcentaje;   
+        }
     }
 }
 
@@ -118,7 +134,7 @@ Game.update = function(){
     }
 }
 
-Game.addPlayer = function(id, x , y){
+Game.addPlayer = function(id, x , y, health){
     //add our player and set the camera
     Game.playerMap[id] = game.add.sprite(x,y,'onyx');
     Game.playerMap[id].animations.add('up', [114, 113, 112], 30, false);
@@ -127,6 +143,7 @@ Game.addPlayer = function(id, x , y){
     Game.playerMap[id].anchor.setTo(.5, .5);
     Game.player = Game.playerMap[id];
     game.physics.enable(Game.player);
+    Game.playerMap[id].health = health;
     console.log(Game.player);
 
     game.camera.height = 600;
@@ -135,6 +152,11 @@ Game.addPlayer = function(id, x , y){
     game.camera.bounds = (0,0,600,600);
     game.camera.follow(Game.player);
     // game.camera.follow(Game.player, Phaser.Camera.FOLLOW_TOPDOWN, 0.5, 0.5);
+    // futuro calculo en proporcion de la vida
+    var porcentaje = 100;
+    // Game.playerMap[id].barraVida = Game.crearBarraVida(x,y,porcentaje, false);
+    Game.playerMap[id].barraVida = Game.crearBarraVida(x,y, porcentaje, false);
+    Game.playerMap[id].barraVidaRestante = Game.crearBarraVida(x+porcentaje,y,100, true);
 
     game.input.onDown.add(function(pointer){
         console.log(pointer);
@@ -144,7 +166,22 @@ Game.addPlayer = function(id, x , y){
     }, this);
 }
 
-Game.addNewPlayer = function(id, x, y){
+Game.crearBarraVida = function(x, y, health, danio) {
+    var drawnObject;
+    var width = health // example;
+    var height = 5 // example;
+    var bmd = game.add.bitmapData(width, height);
+    
+    bmd.ctx.beginPath();
+    bmd.ctx.rect(0, 0, width, height);
+    bmd.ctx.fillStyle = (danio)?'#FF0000':'#00FF00';
+    bmd.ctx.fill();
+    drawnObject = game.add.sprite(x, y, bmd);
+    drawnObject.anchor.setTo(0.5, 0.5);
+    return drawnObject;
+}
+
+Game.addNewPlayer = function(id, x, y, health){
     //we add a player if it isn't our player.
     if(Game.playerMap[id] != Game.player){
         Game.playerMap[id] = game.add.sprite(x,y,'onyx');
@@ -152,6 +189,13 @@ Game.addNewPlayer = function(id, x, y){
         Game.playerMap[id].animations.add('down', [57, 58, 60], 30, false);
         Game.playerMap[id].animations.add('right', [0, 1], 30, false);
         Game.playerMap[id].anchor.setTo(.5, .5);
+
+        var porcentaje = 100;
+        // Game.playerMap[id].barraVida = Game.crearBarraVida(x,y,porcentaje, false);
+        Game.playerMap[id].barraVida = Game.crearBarraVida(x,y,porcentaje, false);
+        Game.playerMap[id].barraVidaRestante = Game.crearBarraVida(x+porcentaje,y,100, true);
+
+        Game.playerMap[id].health = health;
     }
 };
 
@@ -171,6 +215,9 @@ Game.addObject = function(id, x, y){
 
 Game.removePlayer = function(id){
     //we remove a player
+    if(Game.playerMap[id].barraVida) Game.playerMap[id].barraVida.destroy();
+    if(Game.playerMap[id].barraVidaRestante) Game.playerMap[id].barraVidaRestante.destroy();
+
     Game.playerMap[id].destroy();
     delete Game.playerMap[id];
 }
