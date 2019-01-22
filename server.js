@@ -20,14 +20,16 @@ var OBJECT_LIST = [];
 var BULLET_SPEED = 5;
 
 io.on('connection', function(socket){
-    socket.on('newplayer', function(){
+    socket.on('newplayer', function(playerName){
         socket.player = {
             id: server.lastPlayderID++,
+            name: playerName || 'player'+id,
             x: randomInt(100,400),
             y: randomInt(100,400),
             velocity:10,
             size:32,
             health:100,
+            stun: false,
             _moveUp:false,
             _moveDown:false,
             _moveLeft:false,
@@ -39,64 +41,74 @@ io.on('connection', function(socket){
         io.emit('newenemyplayer', socket.player);
         
         socket.on('moveUp', function(){
-            socket.player._moveUp=true;
+            if(!socket.player.stun) socket.player._moveUp=true;
         });
         socket.on('moveDown', function(){
-            socket.player._moveDown=true;
+            if(!socket.player.stun) socket.player._moveDown=true;
         });
         socket.on('moveLeft', function(){
-            socket.player._moveLeft=true;
+            if(!socket.player.stun) socket.player._moveLeft=true;
         });
         socket.on('moveRight', function(){
-            socket.player._moveRight=true;
+            if(!socket.player.stun) socket.player._moveRight=true;
         });
 
         socket.on('shoot', function(pointer){
-            var angle = Math.atan2(pointer.y - socket.player.y, pointer.x - socket.player.x);
-            var velocityX = Math.cos(angle) * BULLET_SPEED;
-            var velocityY = Math.sin(angle) * BULLET_SPEED;
-
-            var bullet = {
-                id:Math.random(),
-                ownerId: socket.player.id,
-                x: socket.player.x,
-                y: socket.player.y,
-                size:5,
-                vx:velocityX,
-                vy:velocityY,
-                damage: 10,
-                timer:0,
-                destroy:false,
-                updatePosition: function(){
-                    if(!this.destroy) {                    
-                        this.x+=this.vx;
-                        this.y+=this.vy;
-                        this.timer++;
-                        if(this.timer>100){
-                            this.destroy = true;
-                        }
-
-                        var playerCollision = collideWithPlayer(this);
-                        if(playerCollision) {
-                            playerCollision.health -= this.damage;
-                            this.destroy = true;
+            if(!socket.player.stun) {
+                var angle = Math.atan2(pointer.y - socket.player.y, pointer.x - socket.player.x);
+                var velocityX = Math.cos(angle) * BULLET_SPEED;
+                var velocityY = Math.sin(angle) * BULLET_SPEED;
+    
+                var bullet = {
+                    id:Math.random(),
+                    ownerId: socket.player.id,
+                    x: socket.player.x,
+                    y: socket.player.y,
+                    size:5,
+                    vx:velocityX,
+                    vy:velocityY,
+                    damage: 10,
+                    timer:0,
+                    destroy:false,
+                    updatePosition: function(){
+                        if(!this.destroy) {                    
+                            this.x+=this.vx;
+                            this.y+=this.vy;
+                            this.timer++;
+                            if(this.timer>100){
+                                this.destroy = true;
+                            }
+    
+                            var playerCollision = collideWithPlayer(this);
+                            if(playerCollision) {
+                                playerCollision.health -= this.damage;
+                                this.destroy = true;
+                            }
                         }
                     }
-                }
-            };
-            OBJECT_LIST.push(bullet)
+                };
+                OBJECT_LIST.push(bullet)
+            }
         })
 
         socket.player.updatePosition = function(){
-            if(socket.player._moveUp) socket.player.y -= socket.player.velocity;
-            if(socket.player._moveDown) socket.player.y += socket.player.velocity;
-            if(socket.player._moveLeft) socket.player.x -= socket.player.velocity;
-            if(socket.player._moveRight) socket.player.x += socket.player.velocity;
+            // if the player is dead we stun him
+            if(socket.player.health <= 0) {
+                socket.player.stun = true;
+            }
 
-            socket.player._moveUp = false;
-            socket.player._moveDown = false;
-            socket.player._moveLeft = false;
-            socket.player._moveRight = false;
+            if(!socket.player.stun) {
+
+                if(socket.player._moveUp) socket.player.y -= socket.player.velocity;
+                if(socket.player._moveDown) socket.player.y += socket.player.velocity;
+                if(socket.player._moveLeft) socket.player.x -= socket.player.velocity;
+                if(socket.player._moveRight) socket.player.x += socket.player.velocity;
+                
+                socket.player._moveUp = false;
+                socket.player._moveDown = false;
+                socket.player._moveLeft = false;
+                socket.player._moveRight = false;
+            }
         }
 
         // gestionamos la desconexion
@@ -111,7 +123,7 @@ function collideWithPlayer(object) {
     var playerCollision = null;
     Object.keys(io.sockets.connected).some(function(socketId){
         var socket = io.sockets.connected[socketId];
-        if(socket.player && object.ownerId !== socket.player.id){
+        if(socket.player && socket.player.health > 0 && object.ownerId !== socket.player.id){
 
             var rect1 = {
                 x: socket.player.x - socket.player.size,

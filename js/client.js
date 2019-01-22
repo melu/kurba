@@ -3,18 +3,18 @@ Client.socket = io.connect();
 
 Client.socket.on('newplayer', function(data){
     console.log("newplayer:"+data.id);
-    Game.addPlayer(data.id, data.x, data.y, data.health);
+    Game.addPlayer(data.id, data.x, data.y, data.health, data.name);
 });
 
 Client.socket.on('newenemyplayer', function(data){
     console.log("newenemyplayer:"+data.id);
-    Game.addNewPlayer(data.id, data.x, data.y, data.health);
+    Game.addNewPlayer(data.id, data.x, data.y, data.health, data.name);
 });
 
 Client.socket.on('allplayers', function(data){
     console.log(data);
     for(var i = 0; i<data.length; i++){
-        Game.addNewPlayer(data[i].id, data[i].x, data[i].y, data[i].health);
+        Game.addNewPlayer(data[i].id, data[i].x, data[i].y, data[i].health, data[i].name);
     }
 });
 
@@ -30,7 +30,7 @@ Client.socket.on('remove', function(id){
 })
 
 Client.askNewPlayer = function(){
-    Client.socket.emit('newplayer');
+    Client.socket.emit('newplayer', 'playerName');
 };
 
 Client.moveUp = function(){
