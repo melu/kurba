@@ -242,6 +242,7 @@ Game.removePlayer = function(id){
     //we remove a player
     if(Game.playerMap[id].barraVida) Game.playerMap[id].barraVida.destroy();
     if(Game.playerMap[id].barraVidaRestante) Game.playerMap[id].barraVidaRestante.destroy();
+    if(Game.playerMap[id].nombre) Game.playerMap[id].nombre.destroy();
 
     Game.playerMap[id].destroy();
     delete Game.playerMap[id];
