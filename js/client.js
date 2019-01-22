@@ -18,9 +18,12 @@ Client.socket.on('allplayers', function(data){
     }
 });
 
-Client.socket.on('move', function(data){
-    Game.movePlayer(data.id, data.x, data.y);
-});
+// Client.socket.on('move', function(data){
+//     Game.movePlayer(data.id, data.x, data.y);
+// });
+Client.socket.on("gameState", function(pack){
+    Game.updateState(pack);
+})
 
 Client.socket.on('remove', function(id){
     Game.removePlayer(id);

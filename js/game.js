@@ -16,11 +16,14 @@ Game.preload = function() {
     game.load.tilemap('map', 'assets/map/example_map.json', null, Phaser.Tilemap.TILED_JSON);
     game.load.spritesheet('tileset', 'assets/map/tilesheet.png',32,32);
     game.load.spritesheet('onyx', 'assets/sprites/qgzlX80.png',32,32);
+    game.load.image('red', 'assets/sprites/red.png');
+
     // game.load.image('sprite','assets/sprites/sprite.png'); // this will be the sprite of the players
 };
 
 Game.create = function(){
     Game.playerMap = {};
+    Game.objectList = [];
     var map = game.add.tilemap('map');
     map.addTilesetImage('tilesheet', 'tileset'); // tilesheet is the key of the tileset in map's JSON file
     var layer;
@@ -33,8 +36,34 @@ Game.create = function(){
     leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
     rightKey = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
 
+    wKey = game.input.keyboard.addKey(Phaser.Keyboard.W);
+    sKey = game.input.keyboard.addKey(Phaser.Keyboard.S);
+    aKey = game.input.keyboard.addKey(Phaser.Keyboard.A);
+    dKey = game.input.keyboard.addKey(Phaser.Keyboard.D);
+
     Client.askNewPlayer();
 };
+
+Game.updateState = function(pack){
+    for(var playerIndex in pack.players){
+        var player = pack.players[playerIndex];
+        Game.movePlayer(player.id, player.x, player.y);
+    }
+
+    for(var objectIndex in pack.objects){
+        var object = pack.objects[objectIndex];
+        if(!Game.objectList[object.id]){
+            Game.addObject(object.id, object.x, object.y);
+        }else{
+            if(object.destroy){
+                Game.removeObject(object.id);
+            }else{
+                Game.objectList[object.id].x = object.x;
+                Game.objectList[object.id].y = object.y;
+            }
+        }
+    }
+}
 
 Game.movePlayer = function(id, x, y){
     if(Game.playerMap && Game.playerMap[id]){
@@ -70,20 +99,20 @@ Game.movePlayer = function(id, x, y){
 }
 
 Game.update = function(){
-    if (upKey.isDown)
+    if (upKey.isDown || wKey.isDown)
     {
         Client.moveUp();
     }
-    else if (downKey.isDown)
+    else if (downKey.isDown || sKey.isDown)
     {
         Client.moveDown();
     }
 
-    if (leftKey.isDown)
+    if (leftKey.isDown || aKey.isDown)
     {
         Client.moveLeft();
     }
-    else if (rightKey.isDown)
+    else if (rightKey.isDown || dKey.isDown)
     {
         Client.moveRight();
     }
@@ -108,7 +137,10 @@ Game.addPlayer = function(id, x , y){
     // game.camera.follow(Game.player, Phaser.Camera.FOLLOW_TOPDOWN, 0.5, 0.5);
 
     game.input.onDown.add(function(pointer){
-        Client.shoot(pointer);
+        console.log(pointer);
+        console.log(pointer.worldX)
+        console.log(pointer.worldY)
+        Client.shoot({x:pointer.worldX, y:pointer.worldY});
     }, this);
 }
 
@@ -123,10 +155,29 @@ Game.addNewPlayer = function(id, x, y){
     }
 };
 
+Game.addObject = function(id, x, y){
+    Game.objectList[id] = game.add.sprite(x,y,'red');
+    // emitter = game.add.emitter(x, y, 200);
+    // emitter.setScale(0,0);
+    // emitter.gravity = 0;
+    // emitter.makeParticles('red');
+    // emitter.start(false, 1000, 10);
+    // Game.objectList[id] = emitter;
+
+    Game.objectList[id].width=40;
+    Game.objectList[id].height=40;
+    Game.objectList[id].anchor.setTo(.5, .5);
+}
+
 Game.removePlayer = function(id){
     //we remove a player
     Game.playerMap[id].destroy();
     delete Game.playerMap[id];
+}
+
+Game.removeObject = function(id){
+    Game.objectList[id].destroy();
+    delete Game.objectList[id];
 }
 
 var game = new Phaser.Game(600, 600, Phaser.AUTO, document.getElementById("game"));

@@ -16,6 +16,8 @@ server.listen(8081,function(){ // Listens to port 8081
 });
 
 server.lastPlayderID = 0;
+var OBJECT_LIST = [];
+var BULLET_SPEED = 5;
 
 io.on('connection', function(socket){
     socket.on('newplayer', function(){
@@ -24,6 +26,8 @@ io.on('connection', function(socket){
             x: randomInt(100,400),
             y: randomInt(100,400),
             velocity:10,
+            size:32,
+            health:100,
             _moveUp:false,
             _moveDown:false,
             _moveLeft:false,
@@ -48,7 +52,38 @@ io.on('connection', function(socket){
         });
 
         socket.on('shoot', function(pointer){
-            console.log(pointer);
+            var angle = Math.atan2(pointer.y - socket.player.y, pointer.x - socket.player.x);
+            var velocityX = Math.cos(angle) * BULLET_SPEED;
+            var velocityY = Math.sin(angle) * BULLET_SPEED;
+
+            var bullet = {
+                id:Math.random(),
+                ownerId: socket.player.id,
+                x: socket.player.x,
+                y: socket.player.y,
+                size:5,
+                vx:velocityX,
+                vy:velocityY,
+                damage: 10,
+                timer:0,
+                destroy:false,
+                updatePosition: function(){
+                    this.x+=this.vx;
+                    this.y+=this.vy;
+                    this.timer++;
+                    if(this.timer>100){
+                        this.destroy = true;
+                    }
+
+                    var playerCollision = collideWithPlayer(this);
+                    if(playerCollision) {
+                        playerCollision.health -= this.damage;
+                        this.destroy = true;
+                    }
+                    
+                }
+            };
+            OBJECT_LIST.push(bullet)
         })
 
         socket.player.updatePosition = function(){
@@ -71,6 +106,41 @@ io.on('connection', function(socket){
 
 });
 
+function collideWithPlayer(object) {
+    var playerCollision = null;
+    Object.keys(io.sockets.connected).some(function(socketId){
+        var socket = io.sockets.connected[socketId];
+        if(socket.player && object.ownerId !== socket.player.id){
+
+            var rect1 = {
+                x: socket.player.x - socket.player.size,
+                y: socket.player.y - socket.player.size,
+                height: socket.player.size * 2,
+                width: socket.player.size * 2
+            };
+            var rect2 = {
+                x: object.x - object.size,
+                y: object.y - object.size,
+                height: object.size * 2,
+                width: object.size * 2
+            };
+
+                if (rect1.x < rect2.x + rect2.width &&
+                        rect1.x + rect1.width > rect2.x &&
+                        rect1.y < rect2.y + rect2.height &&
+                        rect1.height + rect1.y > rect2.y){
+                            console.log("COLLISION:")
+                            console.log(object.ownerID);
+                            console.log(socket.player.id);
+                            console.log(object.ownerID !== socket.player.id);
+                            playerCollision = socket.player;
+                            return socket.player;
+                        }
+        }
+    });
+    return playerCollision;
+}
+
 function getAllPlayers(socket){
     var players = [];
     Object.keys(io.sockets.connected).forEach(function(socketId){
@@ -87,11 +157,40 @@ function randomInt(low, high){
 }
 
 setInterval(function(){
+    var pack = {
+        players:[],
+        objects:[]
+    }
+
+    for(var objectIndex in OBJECT_LIST){
+        var object = OBJECT_LIST[objectIndex];
+        if(object.destroy){
+            delete OBJECT_LIST[objectIndex];
+            OBJECT_LIST.splice(objectIndex, 1);
+        }
+
+        object.updatePosition();
+    }
+    // OBJECT_LIST.forEach(object => {
+    //     // console.log(object);
+    //     object.updatePosition();
+    //     if(object.destroy){
+    //         console.log("delete:"+object.id);
+    //         console.log("delete timer:"+object.timer);
+    //         delete object; 
+    //         console.log("post-delete");
+    //     }
+    // });
+
+    pack.objects = OBJECT_LIST;
+
     Object.keys(io.sockets.connected).forEach(function(socketId){
         var socket = io.sockets.connected[socketId];
         if(socket.player){
             socket.player.updatePosition();
-            io.emit('move', socket.player);
+            pack.players.push(socket.player);
         }
-    });    
+    });
+
+    io.emit("gameState", pack);
 }, 1000/25);
