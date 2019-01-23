@@ -18,6 +18,10 @@ Client.socket.on('allplayers', function(data){
     }
 });
 
+Client.socket.on('pong', function(ms){
+    console.log(ms+"ms")
+})
+
 // Client.socket.on('move', function(data){
 //     Game.movePlayer(data.id, data.x, data.y);
 // });
